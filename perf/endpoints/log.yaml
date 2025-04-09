@@ -18,10 +18,9 @@ config:
     - name: Plain
       duration: 60
       arrivalRate: 5
-    
 
 scenarios:
-  - name: Rates (/rates)
+  - name: Log (/log)
     flow:
       - get:
-          url: '/rates'
+          url: '/log' 
