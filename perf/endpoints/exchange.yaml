@@ -1,0 +1,44 @@
+config:
+  environments:
+    api:
+      target: 'http://localhost:5555'
+      plugins:
+        statsd:
+          host: localhost
+          port: 8125
+          prefix: "artillery-api"
+      payload:
+        - path: '../sample_data/exchanges.csv'
+      fields:
+        - 'baseCurrency'
+        - 'counterCurrency'
+        - 'baseAmount'
+        - 'baseAccountId'
+        - 'counterAccountId'
+      loadAll: true
+      name: exchanges
+
+  pool: 50 # All HTTP requests from all virtual users will be sent over the same connections
+
+  phases:
+    - name: Ramp
+      duration: 30
+      arrivalRate: 1
+      rampTo: 5
+    - name: Plain
+      duration: 60
+      arrivalRate: 5
+
+scenarios:
+  - name: Exchange (/exchange)
+    flow:
+      - loop:
+        - post:
+            url: '/exchange'
+            json:
+              baseCurrency: '{{ $loopElement.baseCurrency }}'
+              counterCurrency: '{{ $loopElement.counterCurrency }}'
+              baseAmount: '{{ $loopElement.baseAmount }}'
+              baseAccountId: '{{ $loopElement.baseAccountId }}'
+              counterAccountId: '{{ $loopElement. counterAccountId }}'
+        over: exchanges

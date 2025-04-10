@@ -1,0 +1,7 @@
+baseCurrency,counterCurrency,rate
+USD,ARS,1064
+ARS,USD,0.00094
+USD,BRL,5.1
+BRL,USD,0.196
+ARS,BRL,0.0048
+BRL,ARS,208.3

@@ -1,0 +1,43 @@
+config:
+  environments:
+    api:
+      target: 'http://localhost:5555'
+      plugins:
+        statsd:
+          host: localhost
+          port: 8125
+          prefix: "artillery-api"
+      payload:
+        - path: '../sample_data/balances.csv'
+      fields:
+        - 'balance'
+      loadAll: true
+      name: balances
+
+  pool: 50 # All HTTP requests from all virtual users will be sent over the same connections
+
+  phases:
+    - name: ramp up
+      duration: 30
+      arrivalRate: 2
+      rampTo: 10
+    - name: plain
+      duration: 60
+      arrivalRate: 10
+    - name: ramp down
+      duration: 30
+      arrivalRate: 10
+      rampTo: 2
+
+
+scenarios:
+  - name: Accounts (/accounts)
+    flow:
+      - get:
+          url: '/accounts'
+      - loop:
+          - put:
+              url: '/accounts/{{ $loopElement.id }}/balance'
+              json:
+                balance: '{{ $loopElement.balance }}'
+        over: balances
