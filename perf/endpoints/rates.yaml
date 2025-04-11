@@ -1,35 +1,52 @@
 config:
   environments:
     api:
-      target: 'http://localhost:5555'
+      target: "http://localhost:5555"
       plugins:
         statsd:
           host: localhost
           port: 8125
           prefix: "artillery-api"
+      payload:
+        - path: "../sample_data/rates.csv"
+      fields:
+        - "baseCurrency"
+        - "counterCurrency"
+        - "rate"
+      loadAll: true
+      name: rates
 
-  pool: 50 # All HTTP requests from all virtual users will be sent over the same connections
+  pool: 50
 
   phases:
-    - name: Ramp
+    - name: Warmup Phase
       duration: 30
-      arrivalRate: 1
-      rampTo: 5
-    - name: Plain
+      arrivalRate: 2
+      rampTo: 10
+
+    - name: Load Test
       duration: 60
-      arrivalRate: 5
-    
+      arrivalRate: 20
+      rampTo: 20
+
+    - name: Stress Test
+      duration: 60
+      arrivalRate: 100
+      rampTo: 200
 
 scenarios:
-  - name: Rates (/rates)
+  - name: Get Rates (/rates)
     flow:
       - get:
-          url: '/rates'
+          url: "/rates"
+
+  - name: Update Rates (/rates)
+    flow:
       - loop:
           - put:
-              url: '/rates'
+              url: "/rates"
               json:
-                baseCurrency: '{{ $loopElement.baseCurrency }}'
-                counterCurrency: '{{ $loopElement.counterCurrency }}'
-                rate: {{ $loopElement.rate }}
+                baseCurrency: "{{ $loopElement.baseCurrency }}"
+                counterCurrency: "{{ $loopElement.counterCurrency }}"
+                rate: { { $loopElement.rate } }
         over: rates
