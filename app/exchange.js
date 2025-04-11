@@ -1,50 +1,76 @@
 import { nanoid } from "nanoid";
+import { redis } from "./redis.js";
+import { fileURLToPath } from "url";
+import path from "path";
+import fs from "fs";
 
-import { init as stateInit, getAccounts as stateAccounts, getRates as stateRates, getLog as stateLog } from "./state.js";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-let accounts;
-let rates;
-let log;
+const ACCOUNTS = "./state/accounts.json";
+const RATES = "./state/rates.json";
+const LOG = "./state/log.json";
 
-//call to initialize the exchange service
 export async function init() {
-  await stateInit();
+  const accounts = JSON.parse(fs.readFileSync(ACCOUNTS, 'utf8'));
+  const rates = JSON.parse(fs.readFileSync(RATES, 'utf8'));
+  const log = JSON.parse(fs.readFileSync(LOG, 'utf8'));
 
-  accounts = stateAccounts();
-  rates = stateRates();
-  log = stateLog();
+  for (const account of accounts) {
+    await redis.hset('accounts', account.id.toString(), JSON.stringify(account));
+  }
+
+  for (const [baseCurrency, ratesObj] of Object.entries(rates)) {
+    for (const [counterCurrency, rate] of Object.entries(ratesObj)) {
+      await redis.hset('rates', `${baseCurrency}:${counterCurrency}`, rate.toString());
+    }
+  }
+
+  for (const entry of log) {
+    await redis.hset('logs', entry.id, JSON.stringify(entry));
+  }
 }
 
 //returns all internal accounts
-export function getAccounts() {
-  return accounts;
-}
+export async function getAccounts() {
+  const accounts = await redis.hgetall('accounts');
+  return Object.values(accounts).map(account => JSON.parse(account));
+} 
 
 //sets balance for an account
-export function setAccountBalance(accountId, balance) {
-  const account = findAccountById(accountId);
-
+export async function setAccountBalance(accountId, balance) {
+  const account = await redis.hget('accounts', accountId);
+  
   if (account != null) {
-    account.balance = balance;
+    const accountData = JSON.parse(account);
+    accountData.balance = balance;
+    await redis.hset('accounts', accountId, JSON.stringify(accountData));
   }
 }
 
 //returns all current exchange rates
-export function getRates() {
-  return rates;
+export async function getRates() {
+  const rates = await redis.hgetall('rates');
+  return Object.entries(rates).reduce((acc, [key, value]) => {
+    const [base, counter] = key.split(':');
+    if (!acc[base]) acc[base] = {};
+    acc[base][counter] = parseFloat(value);
+    return acc;
+  }, {});
 }
 
 //returns the whole transaction log
-export function getLog() {
-  return log;
+export async function getLog() {
+  const logs = await redis.hgetall('logs');
+  return Object.values(logs).map(log => JSON.parse(log));
 }
 
 //sets the exchange rate for a given pair of currencies, and the reciprocal rate as well
-export function setRate(rateRequest) {
+export async function setRate(rateRequest) {
   const { baseCurrency, counterCurrency, rate } = rateRequest;
-
-  rates[baseCurrency][counterCurrency] = rate;
-  rates[counterCurrency][baseCurrency] = Number((1 / rate).toFixed(5));
+  
+  await redis.hset('rates', `${baseCurrency}:${counterCurrency}`, rate.toString());
+  await redis.hset('rates', `${counterCurrency}:${baseCurrency}`, (1/rate).toFixed(5));
 }
 
 //executes an exchange operation
@@ -58,13 +84,14 @@ export async function exchange(exchangeRequest) {
   } = exchangeRequest;
 
   //get the exchange rate
-  const exchangeRate = rates[baseCurrency][counterCurrency];
+  const exchangeRate = parseFloat(await redis.hget('rates', `${baseCurrency}:${counterCurrency}`));
   //compute the requested (counter) amount
   const counterAmount = baseAmount * exchangeRate;
+  
   //find our account on the provided (base) currency
-  const baseAccount = findAccountByCurrency(baseCurrency);
+  const baseAccount = await findAccountByCurrency(baseCurrency);
   //find our account on the counter currency
-  const counterAccount = findAccountByCurrency(counterCurrency);
+  const counterAccount = await findAccountByCurrency(counterCurrency);
 
   //construct the result object with defaults
   const exchangeResult = {
@@ -82,12 +109,15 @@ export async function exchange(exchangeRequest) {
     //try to transfer from clients' base account
     if (await transfer(clientBaseAccountId, baseAccount.id, baseAmount)) {
       //try to transfer to clients' counter account
-      if (
-        await transfer(counterAccount.id, clientCounterAccountId, counterAmount)
-      ) {
+      if (await transfer(counterAccount.id, clientCounterAccountId, counterAmount)) {
         //all good, update balances
         baseAccount.balance += baseAmount;
         counterAccount.balance -= counterAmount;
+        
+        // Update balances in Redis
+        await redis.hset('accounts', baseAccount.id.toString(), JSON.stringify(baseAccount));
+        await redis.hset('accounts', counterAccount.id.toString(), JSON.stringify(counterAccount));
+        
         exchangeResult.ok = true;
         exchangeResult.counterAmount = counterAmount;
       } else {
@@ -105,7 +135,7 @@ export async function exchange(exchangeRequest) {
   }
 
   //log the transaction and return it
-  log.push(exchangeResult);
+  await redis.hset('logs', exchangeResult.id, JSON.stringify(exchangeResult));
 
   return exchangeResult;
 }
@@ -119,22 +149,18 @@ async function transfer(fromAccountId, toAccountId, amount) {
   );
 }
 
-function findAccountByCurrency(currency) {
-  for (let account of accounts) {
+async function findAccountByCurrency(currency) {
+  const accounts = await redis.hgetall('accounts');
+  for (let [id, accountStr] of Object.entries(accounts)) {
+    const account = JSON.parse(accountStr);
     if (account.currency == currency) {
       return account;
     }
   }
-
   return null;
 }
 
-function findAccountById(id) {
-  for (let account of accounts) {
-    if (account.id == id) {
-      return account;
-    }
-  }
-
-  return null;
+async function findAccountById(id) {
+  const accountStr = await redis.hget('accounts', id.toString());
+  return accountStr ? JSON.parse(accountStr) : null;
 }

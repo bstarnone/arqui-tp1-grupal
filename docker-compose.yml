@@ -1,6 +1,8 @@
 services:
     api:
       build: ./app
+      depends_on:
+        - redis
 
     nginx:
         image: nginx:1.27.4
@@ -41,6 +43,10 @@ services:
             - "/var/run:/var/run:rw"
             - "/sys:/sys:ro"
             - "/var/lib/docker/:/var/lib/docker:ro"
+    redis:
+        image: redis:latest
+        ports:
+            - "6379:6379"
 
 volumes:
     grafana_config:
