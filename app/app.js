@@ -20,7 +20,6 @@ app.use(express.json());
 // ACCOUNT endpoints
 
 app.get("/accounts", async (req, res) => {
-  console.log("GET /accounts");
   try {
     const accounts = await getAccounts();
     res.status(200).json(accounts);
