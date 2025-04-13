@@ -1,4 +1,5 @@
 import express from "express";
+import limiter from "limiter.js"
 
 import {
   init as exchangeInit,
@@ -38,7 +39,7 @@ app.put("/accounts/:id/balance", (req, res) => {
 
 // RATE endpoints
 
-app.get("/rates", (req, res) => {
+app.get("/rates", limiter(3), (req, res) => {
   res.json(getRates());
 });
 
