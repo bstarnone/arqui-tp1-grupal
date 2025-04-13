@@ -1,7 +1,7 @@
 config:
   environments:
     api:
-      target: 'http://localhost:5555'
+      target: "http://localhost:5555"
       plugins:
         statsd:
           host: localhost
@@ -11,16 +11,25 @@ config:
   pool: 50 # All HTTP requests from all virtual users will be sent over the same connections
 
   phases:
-    - name: Ramp
+    - name: Warmup Phase
       duration: 30
-      arrivalRate: 1
-      rampTo: 5
-    - name: Plain
+      arrivalRate: 2
+      rampTo: 10
+
+    # Load Test Phase: Simulate a steady load of users
+    - name: Load Test
       duration: 60
-      arrivalRate: 5
+      arrivalRate: 20
+      rampTo: 20
+
+    # Stress Test Phase: Simulate a high load
+    - name: Stress Test
+      duration: 60
+      arrivalRate: 100
+      rampTo: 200
 
 scenarios:
   - name: Log (/log)
     flow:
       - get:
-          url: '/log' 
+          url: "/log"

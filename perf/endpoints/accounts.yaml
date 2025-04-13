@@ -1,43 +1,49 @@
 config:
   environments:
     api:
-      target: 'http://localhost:5555'
+      target: "http://localhost:5555"
       plugins:
         statsd:
           host: localhost
           port: 8125
           prefix: "artillery-api"
       payload:
-        - path: '../sample_data/balances.csv'
+        - path: "../sample_data/balances.csv" # Used for PUT requests
       fields:
-        - 'balance'
+        - "balance"
       loadAll: true
       name: balances
 
   pool: 50 # All HTTP requests from all virtual users will be sent over the same connections
 
   phases:
-    - name: ramp up
+    - name: Warmup Phase
       duration: 30
       arrivalRate: 2
       rampTo: 10
-    - name: plain
-      duration: 60
-      arrivalRate: 10
-    - name: ramp down
-      duration: 30
-      arrivalRate: 10
-      rampTo: 2
+    # Load Test Phase: Simulate a steady load of users
+    - name: Load Test
+      duration: 60 # Test for 1 minute
+      arrivalRate: 20 # 20 new virtual users per second
+      rampTo: 20 # Ramp up to 20 users (steady state)
 
+    # Stress Test Phase: Simulate a high load, increasing the number of users significantly
+    - name: Stress Test
+      duration: 60 # Test for 1 minute
+      arrivalRate: 100 # Start with 100 new users per second
+      rampTo: 200 # Ramp up to 200 users per second
 
 scenarios:
-  - name: Accounts (/accounts)
+  - name: Get Accounts (/accounts)
     flow:
       - get:
-          url: '/accounts'
+          url: "/accounts"
+
+  - name: Update Account Balances (/accounts/{id}/balance)
+    flow:
       - loop:
           - put:
-              url: '/accounts/{{ $loopElement.id }}/balance'
+              url: "/accounts/{{ $loopElement.id }}/balance"
               json:
-                balance: '{{ $loopElement.balance }}'
+                balance: "{{ $loopElement.balance }}"
         over: balances
