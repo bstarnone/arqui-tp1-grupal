@@ -53,7 +53,7 @@ app.get("/rates", (req, res) => {
     res.status(200).json(rates);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
-  } 
+  }
 });
 
 app.put("/rates", (req, res) => {
@@ -105,12 +105,16 @@ app.post("/exchange", async (req, res) => {
   }
 
   const exchangeRequest = { ...req.body };
-  const exchangeResult = await exchange(exchangeRequest);
+  try {
+    const exchangeResult = await exchange(exchangeRequest);
 
-  if (exchangeResult.ok) {
-    res.status(200).json(exchangeResult);
-  } else {
-    res.status(500).json(exchangeResult);
+    if (exchangeResult.ok) {
+      res.status(200).json(exchangeResult);
+    } else {
+      res.status(500).json(exchangeResult);
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
