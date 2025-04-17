@@ -2,7 +2,7 @@ import { MongoClient } from "mongodb";
 
 const client = new MongoClient("mongodb://mongodb:27017");
 
-client.connect();
+await client.connect();
 
 const db = client.db("arvault-db");
 

@@ -12,16 +12,13 @@ const RATES = "./state/rates.json";
 const LOG = "./state/log.json";
 
 export async function init() {
-  const accountsData = accounts.find({}).toArray();
-  const ratesData = rates.find({}).toArray();
-  const logData = log.find({}).toArray();
-  await Promise.all(accountsData, ratesData, logData);
+  const data = await Promise.all([
+    log.find({}).toArray(),
+    rates.find({}).toArray(),
+    accounts.find({}).toArray(),
+  ]);
 
-  if (
-    accountsData.length === 0 &&
-    ratesData.length === 0 &&
-    logData.length === 0
-  ) {
+  if (data[0].length === 0 && data[1].length === 0 && data[2].length === 0) {
     console.log("No data in DB, saving state from disk...");
     await saveState();
   }
@@ -41,7 +38,6 @@ export async function saveState() {
 
     const ratesData = fs.readFileSync(path.join(__dirname, RATES));
     const ratesObj = JSON.parse(ratesData);
-
     // Crear un documento por cada moneda base
     for (const [baseCurrency, counterCurrencies] of Object.entries(ratesObj)) {
       await rates.insertOne({
