@@ -1,0 +1,44 @@
+Si tenés 1 núcleo:
+
+    1 segundo = 1,000,000,000 nanosegundos
+
+    Entonces, 10,000,000,000 nanosegundos ⇒ equivalente a 10 CPUs (por segundo)
+
+
+En mi caso, 8 cpus = 8_000_000_000 
+
+
+
+
+Load balancing (ver estrategias)
+
+
+
+PREGUNTAS
+
+- Populate de la db?
+- Algun flujo de artillery? 
+- Cache y database ??????????
+- Cachear alguna recomendacion (??)
+- 
+
+
+
+
+- Cosas que probar 3
+
+    - Accounts  
+        - Get 
+        - Put
+    - Rates 
+        - Get
+        - Put
+    - Exchange 
+        - Post
+    - Log 
+        - Get despues de popularlo
+
+
+docker exec exchange-nginx-1 nginx -s reload
+# validate new config
+docker exec exchange-nginx-1 nginx -t
