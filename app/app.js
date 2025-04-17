@@ -19,17 +19,17 @@ app.use(express.json());
 
 // ACCOUNT endpoints
 
-app.get("/accounts", (req, res) => {
-  console.log("GET /accounts");
+app.get("/accounts", async (req, res) => {
   try {
-    const accounts = getAccounts();
+    const accounts = await getAccounts();
     res.status(200).json(accounts);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-app.put("/accounts/:id/balance", (req, res) => {
+app.put("/accounts/:id/balance", async (req, res) => {
   const accountId = req.params.id;
   const { balance } = req.body;
 
@@ -37,9 +37,10 @@ app.put("/accounts/:id/balance", (req, res) => {
     return res.status(400).json({ error: "Malformed request" });
   } else {
     try {
-      const parsedAccount = setAccountBalance(accountId, balance);
+      const parsedAccount = await setAccountBalance(accountId, balance);
       res.status(200).json(parsedAccount);
     } catch (error) {
+      console.error(error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -47,16 +48,17 @@ app.put("/accounts/:id/balance", (req, res) => {
 
 // RATE endpoints
 
-app.get("/rates", (req, res) => {
+app.get("/rates", async (req, res) => {
   try {
-    const rates = getRates();
+    const rates = await getRates();
     res.status(200).json(rates);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Internal server error" });
-  }
+  } 
 });
 
-app.put("/rates", (req, res) => {
+app.put("/rates", async (req, res) => {
   const { baseCurrency, counterCurrency, rate } = req.body;
 
   if (!baseCurrency || !counterCurrency || !rate) {
@@ -65,20 +67,22 @@ app.put("/rates", (req, res) => {
 
   const newRateRequest = { ...req.body };
   try {
-    const parsedRates = setRate(newRateRequest);
+    const parsedRates = await setRate(newRateRequest);
     res.status(200).json(parsedRates);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // LOG endpoint
 
-app.get("/log", (req, res) => {
+app.get("/log", async (req, res) => {
   try {
-    const log = getLog();
+    const log = await getLog();
     res.status(200).json(log);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -104,16 +108,17 @@ app.post("/exchange", async (req, res) => {
     return res.status(400).json({ error: "Malformed request" });
   }
 
-  const exchangeRequest = { ...req.body };
   try {
+    const exchangeRequest = { ...req.body };
     const exchangeResult = await exchange(exchangeRequest);
 
     if (exchangeResult.ok) {
       res.status(200).json(exchangeResult);
     } else {
-      res.status(500).json(exchangeResult);
+      res.status(500).json("Internal server error");
     }
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

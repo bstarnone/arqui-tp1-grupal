@@ -1,10 +1,12 @@
 services:
   api:
     build: ./app
-    expose:
-      - "3000"
+    depends_on:
+      - redis
+      - mongodb
     networks:
       - backend
+
   nginx:
     image: nginx:1.27.4
     ports:
@@ -42,8 +44,6 @@ services:
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.2
-    # links:
-    #   - graphite
     networks:
       - backend
     command: -storage_driver="statsd" -storage_driver_host="graphite:8125" -storage_driver_db="cadvisor" -storage_driver_buffer_duration="1s" --docker_only=true
@@ -56,10 +56,21 @@ services:
       - "/var/lib/docker/:/var/lib/docker:ro"
     depends_on:
       - graphite
+  redis:
+    image: redis:latest
+    command: --port 6379
+    ports:
+      - "6379:6379"
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_db_data:/data/db
 
 volumes:
   grafana_config:
     driver: local
-
+  mongodb_db_data:
 networks:
   backend:

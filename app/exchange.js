@@ -1,55 +1,135 @@
 import { nanoid } from "nanoid";
+import { accounts, rates, log } from "./mongo.js";
+import { redis } from "./redis.js";
+import { fileURLToPath } from "url";
+import path from "path";
+import fs from "fs";
 
-import {
-  init as stateInit,
-  getAccounts as stateAccounts,
-  getRates as stateRates,
-  getLog as stateLog,
-} from "./state.js";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-let accounts;
-let rates;
-let log;
+const ACCOUNTS = "./state/accounts.json";
+const RATES = "./state/rates.json";
+const LOG = "./state/log.json";
 
-//call to initialize the exchange service
 export async function init() {
-  await stateInit();
-
-  accounts = stateAccounts();
-  rates = stateRates();
-  log = stateLog();
-}
-
-//returns all internal accounts
-export function getAccounts() {
-  return accounts;
-}
-
-//sets balance for an account
-export function setAccountBalance(accountId, balance) {
-  const account = findAccountById(accountId);
-
-  if (account != null) {
-    account.balance = balance;
+  const accountsData = await accounts.find({}).toArray();
+  const ratesData = await rates.find({}).toArray();
+  const logData = await log.find({}).toArray();
+  if (
+    accountsData.length === 0 &&
+    ratesData.length === 0 &&
+    logData.length === 0
+  ) {
+    console.log("No data in DB, saving state from disk...");
+    await saveState();
   }
 }
 
+export async function saveState() {
+  try {
+    const accountsData = fs.readFileSync(path.join(__dirname, ACCOUNTS));
+    const accountsList = JSON.parse(accountsData);
+    accountsList.forEach((account) => {
+      accounts.insertOne({
+        _id: account.id,
+        currency: account.currency,
+        balance: account.balance,
+      });
+    });
+
+    const ratesData = fs.readFileSync(path.join(__dirname, RATES));
+    const ratesObj = JSON.parse(ratesData);
+
+    // Crear un documento por cada moneda base
+    for (const [baseCurrency, counterCurrencies] of Object.entries(ratesObj)) {
+      await rates.insertOne({
+        baseCurrency,
+        rates: counterCurrencies,
+      });
+    }
+
+    const logData = fs.readFileSync(path.join(__dirname, LOG));
+    const logList = JSON.parse(logData);
+    logList.forEach((logEntry) => {
+      log.insertOne(logEntry);
+    });
+  } catch (error) {
+    console.error("Error initializing data:", error);
+    throw error;
+  }
+}
+
+//returns all internal accounts
+export async function getAccounts() {
+  const accountsData = await accounts.find({}).toArray();
+  return accountsData;
+}
+
+//sets balance for an account
+export async function setAccountBalance(accountId, balance) {
+  let account = await redis.cache_client.hGet("accounts", accountId);
+  if (!account) {
+    console.log("account not found in cache, fetching from DB");
+    account = await accounts.findOne({ _id: Number(accountId) });
+    console.log("Found account:", account);
+    if (!account) {
+      throw new Error("Account not found");
+    }
+  }
+  account.balance = balance;
+  await accounts.updateOne({ _id: Number(accountId) }, { $set: { balance } });
+  redis.cache_client.del("accounts");
+  return account;
+}
+
 //returns all current exchange rates
-export function getRates() {
-  return rates;
+export async function getRates() {
+  const ratesData = await rates.find({}).toArray();
+  return ratesData;
 }
 
 //returns the whole transaction log
-export function getLog() {
-  return log;
+export async function getLog() {
+  const logData = await log.find({}).toArray();
+  return logData;
 }
 
 //sets the exchange rate for a given pair of currencies, and the reciprocal rate as well
-export function setRate(rateRequest) {
+export async function setRate(rateRequest) {
   const { baseCurrency, counterCurrency, rate } = rateRequest;
 
-  rates[baseCurrency][counterCurrency] = rate;
-  rates[counterCurrency][baseCurrency] = Number((1 / rate).toFixed(5));
+  let baseRate = await redis.cache_client.hGet("rates", baseCurrency);
+  let counterRate = await redis.cache_client.hGet("rates", counterCurrency);
+
+  if (!baseRate) {
+    baseRate = await rates.findOne({ baseCurrency: baseCurrency });
+  }
+
+  if (!counterRate) {
+    counterRate = await rates.findOne({ baseCurrency: counterCurrency });
+  }
+
+  baseRate.rates[counterCurrency] = rate;
+  counterRate.rates[baseCurrency] = Number((1 / rate).toFixed(5));
+
+  await rates.updateOne(
+    { baseCurrency: baseCurrency },
+    { $set: { rates: baseRate.rates } }
+  );
+  await rates.updateOne(
+    { baseCurrency: counterCurrency },
+    { $set: { rates: counterRate.rates } }
+  );
+
+  redis.cache_client.hSet("rates", baseCurrency, JSON.stringify(baseRate));
+  redis.cache_client.hSet(
+    "rates",
+    counterCurrency,
+    JSON.stringify(counterRate)
+  );
+
+  return baseRate;
 }
 
 //executes an exchange operation
@@ -62,14 +142,19 @@ export async function exchange(exchangeRequest) {
     baseAmount,
   } = exchangeRequest;
 
+  let rate = await redis.cache_client.hGet("rates", baseCurrency);
+  if (!rate) {
+    rate = await rates.findOne({ baseCurrency });
+  }
+
   //get the exchange rate
-  const exchangeRate = rates[baseCurrency][counterCurrency];
+  const exchangeRate = rate.rates[counterCurrency];
   //compute the requested (counter) amount
   const counterAmount = baseAmount * exchangeRate;
   //find our account on the provided (base) currency
-  const baseAccount = findAccountByCurrency(baseCurrency);
+  const baseAccount = await findAccountByCurrency(baseCurrency);
   //find our account on the counter currency
-  const counterAccount = findAccountByCurrency(counterCurrency);
+  const counterAccount = await findAccountByCurrency(counterCurrency);
 
   //construct the result object with defaults
   const exchangeResult = {
@@ -81,23 +166,35 @@ export async function exchange(exchangeRequest) {
     counterAmount: 0.0,
     obs: null,
   };
-
   //check if we have funds on the counter currency account
   if (counterAccount.balance >= counterAmount) {
     //try to transfer from clients' base account
     if (await transfer(clientBaseAccountId, baseAccount.id, baseAmount)) {
       //try to transfer to clients' counter account
       if (
-        await transfer(counterAccount.id, clientCounterAccountId, counterAmount)
+        await transfer(
+          counterAccount._id,
+          clientCounterAccountId,
+          counterAmount
+        )
       ) {
         //all good, update balances
         baseAccount.balance += baseAmount;
         counterAccount.balance -= counterAmount;
         exchangeResult.ok = true;
         exchangeResult.counterAmount = counterAmount;
+
+        await accounts.updateOne(
+          { _id: Number(baseAccount._id) },
+          { $set: { balance: baseAccount.balance } }
+        );
+        await accounts.updateOne(
+          { _id: Number(counterAccount._id) },
+          { $set: { balance: counterAccount.balance } }
+        );
       } else {
         //could not transfer to clients' counter account, return base amount to client
-        await transfer(baseAccount.id, clientBaseAccountId, baseAmount);
+        await transfer(baseAccount._id, clientBaseAccountId, baseAmount);
         exchangeResult.obs = "Could not transfer to clients' account";
       }
     } else {
@@ -110,7 +207,7 @@ export async function exchange(exchangeRequest) {
   }
 
   //log the transaction and return it
-  log.push(exchangeResult);
+  await log.insertOne(exchangeResult);
 
   return exchangeResult;
 }
@@ -124,22 +221,20 @@ async function transfer(fromAccountId, toAccountId, amount) {
   );
 }
 
-function findAccountByCurrency(currency) {
-  for (let account of accounts) {
-    if (account.currency == currency) {
-      return account;
-    }
+async function findAccountByCurrency(currency) {
+  const account = await accounts.findOne({
+    currency: currency,
+  });
+  if (!account) {
+    return null;
   }
-
-  return null;
+  return account;
 }
 
-function findAccountById(id) {
-  for (let account of accounts) {
-    if (account.id == id) {
-      return account;
-    }
+async function findAccountById(id) {
+  const account = await accounts.findOne({ _id: Number(id) });
+  if (!account) {
+    return null;
   }
-
-  return null;
+  return account;
 }
