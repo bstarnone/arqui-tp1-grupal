@@ -24,6 +24,7 @@ app.get("/accounts", async (req, res) => {
     const accounts = await getAccounts();
     res.status(200).json(accounts);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -39,6 +40,7 @@ app.put("/accounts/:id/balance", async (req, res) => {
       const parsedAccount = await setAccountBalance(accountId, balance);
       res.status(200).json(parsedAccount);
     } catch (error) {
+      console.error(error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -51,6 +53,7 @@ app.get("/rates", async (req, res) => {
     const rates = await getRates();
     res.status(200).json(rates);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Internal server error" });
   } 
 });
@@ -67,6 +70,7 @@ app.put("/rates", async (req, res) => {
     const parsedRates = await setRate(newRateRequest);
     res.status(200).json(parsedRates);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -78,6 +82,7 @@ app.get("/log", async (req, res) => {
     const log = await getLog();
     res.status(200).json(log);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -113,6 +118,7 @@ app.post("/exchange", async (req, res) => {
       res.status(500).json("Internal server error");
     }
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
