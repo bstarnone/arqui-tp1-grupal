@@ -12,9 +12,11 @@ const RATES = "./state/rates.json";
 const LOG = "./state/log.json";
 
 export async function init() {
-  const accountsData = await accounts.find({}).toArray();
-  const ratesData = await rates.find({}).toArray();
-  const logData = await log.find({}).toArray();
+  const accountsData = accounts.find({}).toArray();
+  const ratesData = rates.find({}).toArray();
+  const logData = log.find({}).toArray();
+  await Promise.all(accountsData, ratesData, logData);
+
   if (
     accountsData.length === 0 &&
     ratesData.length === 0 &&

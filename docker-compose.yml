@@ -61,10 +61,13 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_db_data:/data/db
+    networks:
+      - backend
 
 volumes:
   grafana_config:
     driver: local
   mongodb_db_data:
+    name: mongodb_db_data
 networks:
   backend:
