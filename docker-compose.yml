@@ -2,7 +2,6 @@ services:
   api:
     build: ./app
     depends_on:
-      - redis
       - mongodb
     networks:
       - backend
@@ -56,11 +55,6 @@ services:
       - "/var/lib/docker/:/var/lib/docker:ro"
     depends_on:
       - graphite
-  redis:
-    image: redis:latest
-    command: --port 6379
-    ports:
-      - "6379:6379"
   mongodb:
     image: mongo:latest
     ports:

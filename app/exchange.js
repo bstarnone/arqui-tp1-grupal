@@ -1,6 +1,5 @@
 import { nanoid } from "nanoid";
 import { accounts, rates, log } from "./mongo.js";
-import { redis } from "./redis.js";
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
@@ -68,18 +67,13 @@ export async function getAccounts() {
 
 //sets balance for an account
 export async function setAccountBalance(accountId, balance) {
-  let account = await redis.cache_client.hGet("accounts", accountId);
+  const account = await accounts.findOne({ _id: Number(accountId) });
+  console.log("Found account:", account);
   if (!account) {
-    console.log("account not found in cache, fetching from DB");
-    account = await accounts.findOne({ _id: Number(accountId) });
-    console.log("Found account:", account);
-    if (!account) {
-      throw new Error("Account not found");
-    }
+    throw new Error("Account not found");
   }
   account.balance = balance;
   await accounts.updateOne({ _id: Number(accountId) }, { $set: { balance } });
-  redis.cache_client.del("accounts");
   return account;
 }
 
@@ -99,16 +93,8 @@ export async function getLog() {
 export async function setRate(rateRequest) {
   const { baseCurrency, counterCurrency, rate } = rateRequest;
 
-  let baseRate = await redis.cache_client.hGet("rates", baseCurrency);
-  let counterRate = await redis.cache_client.hGet("rates", counterCurrency);
-
-  if (!baseRate) {
-    baseRate = await rates.findOne({ baseCurrency: baseCurrency });
-  }
-
-  if (!counterRate) {
-    counterRate = await rates.findOne({ baseCurrency: counterCurrency });
-  }
+  let baseRate = await rates.findOne({ baseCurrency: baseCurrency });
+  let counterRate = await rates.findOne({ baseCurrency: counterCurrency });
 
   baseRate.rates[counterCurrency] = rate;
   counterRate.rates[baseCurrency] = Number((1 / rate).toFixed(5));
@@ -120,13 +106,6 @@ export async function setRate(rateRequest) {
   await rates.updateOne(
     { baseCurrency: counterCurrency },
     { $set: { rates: counterRate.rates } }
-  );
-
-  redis.cache_client.hSet("rates", baseCurrency, JSON.stringify(baseRate));
-  redis.cache_client.hSet(
-    "rates",
-    counterCurrency,
-    JSON.stringify(counterRate)
   );
 
   return baseRate;
@@ -142,10 +121,7 @@ export async function exchange(exchangeRequest) {
     baseAmount,
   } = exchangeRequest;
 
-  let rate = await redis.cache_client.hGet("rates", baseCurrency);
-  if (!rate) {
-    rate = await rates.findOne({ baseCurrency });
-  }
+  let rate = await rates.findOne({ baseCurrency });
 
   //get the exchange rate
   const exchangeRate = rate.rates[counterCurrency];
