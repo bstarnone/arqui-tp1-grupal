@@ -20,17 +20,17 @@ app.use(express.json());
 
 // ACCOUNT endpoints
 
-app.get("/accounts", (req, res) => {
+app.get("/accounts", limiter(200), (_, res) => {
   console.log("GET /accounts");
   try {
     const accounts = getAccounts();
     res.status(200).json(accounts);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(error.statusCode).send(error.message);
   }
 });
 
-app.put("/accounts/:id/balance", (req, res) => {
+app.put("/accounts/:id/balance", limiter(200), (req, res) => {
   const accountId = req.params.id;
   const { balance } = req.body;
 
@@ -41,20 +41,20 @@ app.put("/accounts/:id/balance", (req, res) => {
       const parsedAccount = setAccountBalance(accountId, balance);
       res.status(200).json(parsedAccount);
     } catch (error) {
-      res.status(500).json({ error: "Internal server error" });
+      res.status(error.statusCode).send(error.message);
     }
   }
 });
 
 // RATE endpoints
 
-app.get("/rates", limiter(3), (req, res) => {
+app.get("/rates", limiter(3), (_, res) => {
   try {
     const rates = getRates();
     res.status(200).json(rates);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  } 
+    res.status(error.statusCode).send(error.message);
+  }
 });
 
 app.put("/rates", (req, res) => {
@@ -69,18 +69,18 @@ app.put("/rates", (req, res) => {
     const parsedRates = setRate(newRateRequest);
     res.status(200).json(parsedRates);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(error.statusCode).send(error.message);
   }
 });
 
 // LOG endpoint
 
-app.get("/log", (req, res) => {
+app.get("/log", (_, res) => {
   try {
     const log = getLog();
     res.status(200).json(log);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(error.statusCode).send(error.message);
   }
 });
 
