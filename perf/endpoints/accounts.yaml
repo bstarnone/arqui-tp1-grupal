@@ -24,14 +24,16 @@ config:
     # Load Test Phase: Simulate a steady load of users
     - name: Load Test
       duration: 60 # Test for 1 minute
-      arrivalRate: 20 # 20 new virtual users per second
-      rampTo: 20 # Ramp up to 20 users (steady state)
-
+      arrivalRate: 10 # 10 new virtual users per second
+      rampTo: 300 # Ramp up to 300 users (steady state)
+    - name: Plain
+      duration: 30
+      arrivalRate: 300
     # Stress Test Phase: Simulate a high load, increasing the number of users significantly
     - name: Stress Test
-      duration: 60 # Test for 1 minute
-      arrivalRate: 100 # Start with 100 new users per second
-      rampTo: 200 # Ramp up to 200 users per second
+      duration: 60 # Test for 1:30 minutes
+      arrivalRate: 250 # Start with 25 new users per second
+      rampTo: 1000 # Ramp up to 200 users per second
 
 scenarios:
   - name: Get Accounts (/accounts)
