@@ -83,7 +83,13 @@ app.post("/exchange", async (req, res) => {
   }
 
   const exchangeRequest = { ...req.body };
-  const exchangeResult = await exchange(exchangeRequest);
+  let exchangeResult;
+  try{
+    exchangeResult = await exchange(exchangeRequest);
+  }
+  catch (e){
+    return res.status(400).json(e.message);
+  }
 
   if (exchangeResult.ok) {
     res.status(200).json(exchangeResult);

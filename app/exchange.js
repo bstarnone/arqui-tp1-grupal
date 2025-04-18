@@ -57,8 +57,10 @@ export async function exchange(exchangeRequest) {
     baseAmount,
   } = exchangeRequest;
 
+  if (baseAmount < 0) throw new Error("Base amount cannot be negative");
+  checkAccountsExist(clientBaseAccountId, clientCounterAccountId);
   //get the exchange rate
-  const exchangeRate = rates[baseCurrency][counterCurrency];
+  const exchangeRate = getExchangeRate(baseCurrency, counterCurrency);
   //compute the requested (counter) amount
   const counterAmount = baseAmount * exchangeRate;
   //find our account on the provided (base) currency
@@ -137,4 +139,16 @@ function findAccountById(id) {
   }
 
   return null;
+}
+
+function getExchangeRate(baseCurrency, counterCurrency){
+  if(!rates[baseCurrency]) throw new Error("Base currency unavailable");
+  if(!rates[counterCurrency]) throw new Error("Counter currency unavailable");
+  
+  return rates[baseCurrency][counterCurrency];
+}
+
+function checkAccountsExist(baseAccountId, counterAccountId){
+  if(!accounts[baseAccountId]) throw new Error("Base account not found");
+  if(!accounts[counterAccountId]) throw new Error("Counter account not found");
 }
