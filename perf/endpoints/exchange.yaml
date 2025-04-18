@@ -1,24 +1,78 @@
-config:
-  environments:
-    api:
-      target: "http://localhost:5555"
-      plugins:
-        statsd:
-          host: localhost
-          port: 8125
-          prefix: "artillery-api"
-      payload:
-        - path: "../sample_data/exchanges.csv"
-      fields:
-        - "baseCurrency"
-        - "counterCurrency"
-        - "baseAmount"
-        - "baseAccountId"
-        - "counterAccountId"
-      loadAll: true
-      name: exchanges
+# config:
+#   target: "http://localhost:5555"
+#   plugins:
+#     statsd:
+#       host: localhost
+#       port: 8125
+#       prefix: "artillery-api"
 
-  pool: 50 # All HTTP requests from all virtual users will be sent over the same connections
+#   payload:
+#     path: "../sample_data/exchanges.csv"
+#     fields:
+#       - "baseCurrency"
+#       - "counterCurrency"
+#       - "baseAmount"
+#       - "baseAccountId"
+#       - "counterAccountId"
+#     loadAll: true
+#     name: exchanges
+
+#   http:
+#     pool: 50
+
+#   phases:
+#     - name: Warmup Phase
+#       duration: 30
+#       arrivalRate: 2
+#       rampTo: 10
+
+#     - name: Load Test
+#       duration: 60
+#       arrivalRate: 10
+#       rampTo: 300
+
+#     - name: Plain
+#       duration: 30
+#       arrivalRate: 300
+
+#     - name: Stress Test
+#       duration: 60
+#       arrivalRate: 250
+#       rampTo: 1000
+
+# scenarios:
+#   - name: Exchange (/exchange)
+#     flow:
+#       - loop:
+#           - post:
+#               url: "/exchange"
+#               json:
+#                 baseCurrency: "{{ $loopElement.baseCurrency }}"
+#                 counterCurrency: "{{ $loopElement.counterCurrency }}"
+#                 baseAmount: "{{ $loopElement.baseAmount }}"
+#                 baseAccountId: "{{ $loopElement.baseAccountId }}"
+#                 counterAccountId: "{{ $loopElement.counterAccountId }}"
+#         over: exchanges
+
+config:
+  target: "http://localhost:5555"
+  plugins:
+    statsd:
+      host: localhost
+      port: 8125
+      prefix: "artillery-api"
+
+  payload:
+    path: "../sample_data/exchanges.csv"
+    fields:
+      - baseCurrency
+      - counterCurrency
+      - baseAmount
+      - baseAccountId
+      - counterAccountId
+
+  http:
+    pool: 50
 
   phases:
     - name: Warmup Phase
@@ -26,28 +80,28 @@ config:
       arrivalRate: 2
       rampTo: 10
 
-    # Load Test Phase: Simulate a steady load of users
     - name: Load Test
-      duration: 60 # Test for 1 minute
-      arrivalRate: 20 # 20 new virtual users per second
-      rampTo: 20 # Steady state
+      duration: 60
+      arrivalRate: 10
+      rampTo: 300
 
-    # Stress Test Phase: Simulate a high load, increasing the number of users significantly
+    - name: Plain
+      duration: 30
+      arrivalRate: 300
+
     - name: Stress Test
-      duration: 60 # Test for 1 minute
-      arrivalRate: 100 # Start with 100 new users per second
-      rampTo: 200 # Ramp up to 200 users per second
+      duration: 60
+      arrivalRate: 250
+      rampTo: 1000
 
 scenarios:
   - name: Exchange (/exchange)
     flow:
-      - loop:
-          - post:
-              url: "/exchange"
-              json:
-                baseCurrency: "{{ $loopElement.baseCurrency }}"
-                counterCurrency: "{{ $loopElement.counterCurrency }}"
-                baseAmount: "{{ $loopElement.baseAmount }}"
-                baseAccountId: "{{ $loopElement.baseAccountId }}"
-                counterAccountId: "{{ $loopElement.counterAccountId }}"
-        over: exchanges
+      - post:
+          url: "/exchange"
+          json:
+            baseCurrency: "{{ baseCurrency }}"
+            counterCurrency: "{{ counterCurrency }}"
+            baseAmount: "{{ baseAmount }}"
+            baseAccountId: "{{ baseAccountId }}"
+            counterAccountId: "{{ counterAccountId }}"
