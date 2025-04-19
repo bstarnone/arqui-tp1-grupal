@@ -1,5 +1,5 @@
 import express from "express";
-import limiter from "limiter.js"
+import limiter from "./limiter.js"
 
 import {
   init as exchangeInit,
@@ -18,9 +18,14 @@ const port = 3000;
 
 app.use(express.json());
 
+const LOG_REQ_PER_WINDOW = 100;
+const RATES_REQ_PER_WINDOW = 20;
+const ACCOUNTS_REQ_PER_WINDOW = 200;
+const EXCHANGE_REQ_PER_WINDOW = 100;
+
 // ACCOUNT endpoints
 
-app.get("/accounts", limiter(200), (_, res) => {
+app.get("/accounts", limiter(ACCOUNTS_REQ_PER_WINDOW), (_, res) => {
   console.log("GET /accounts");
   try {
     const accounts = getAccounts();
@@ -30,7 +35,7 @@ app.get("/accounts", limiter(200), (_, res) => {
   }
 });
 
-app.put("/accounts/:id/balance", limiter(200), (req, res) => {
+app.put("/accounts/:id/balance", limiter(ACCOUNTS_REQ_PER_WINDOW), (req, res) => {
   const accountId = req.params.id;
   const { balance } = req.body;
 
@@ -48,7 +53,7 @@ app.put("/accounts/:id/balance", limiter(200), (req, res) => {
 
 // RATE endpoints
 
-app.get("/rates", limiter(3), (_, res) => {
+app.get("/rates", limiter(RATES_REQ_PER_WINDOW), (_, res) => {
   try {
     const rates = getRates();
     res.status(200).json(rates);
@@ -57,7 +62,7 @@ app.get("/rates", limiter(3), (_, res) => {
   }
 });
 
-app.put("/rates", (req, res) => {
+app.put("/rates", limiter(RATES_REQ_PER_WINDOW), (req, res) => {
   const { baseCurrency, counterCurrency, rate } = req.body;
 
   if (!baseCurrency || !counterCurrency || !rate) {
@@ -75,7 +80,7 @@ app.put("/rates", (req, res) => {
 
 // LOG endpoint
 
-app.get("/log", (_, res) => {
+app.get("/log", limiter(LOG_REQ_PER_WINDOW), (_, res) => {
   try {
     const log = getLog();
     res.status(200).json(log);
@@ -86,7 +91,7 @@ app.get("/log", (_, res) => {
 
 // EXCHANGE endpoint
 
-app.post("/exchange", async (req, res) => {
+app.post("/exchange", limiter(EXCHANGE_REQ_PER_WINDOW), async (req, res) => {
   const {
     baseCurrency,
     counterCurrency,
@@ -105,13 +110,12 @@ app.post("/exchange", async (req, res) => {
     return res.status(400).json({ error: "Malformed request" });
   }
 
-  const exchangeRequest = { ...req.body };
-  const exchangeResult = await exchange(exchangeRequest);
-
-  if (exchangeResult.ok) {
+  try {
+    const exchangeRequest = { ...req.body };
+    const exchangeResult = await exchange(exchangeRequest);
     res.status(200).json(exchangeResult);
-  } else {
-    res.status(500).json(exchangeResult);
+  } catch (error) {
+    res.status(error.statusCode).send(error.message);
   }
 });
 
