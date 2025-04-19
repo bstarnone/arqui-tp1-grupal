@@ -2,13 +2,10 @@ import rateLimit from "express-rate-limit";
 
 const limiter = (limit) => {
     return rateLimit({
-        windowMs: 5 * 60 * 1000,
+        windowMs: 30 * 1000,
         max: limit,
-        handler: function (res) {
-            res.status(429).json({
-                message: "Too many requests, please try again later.",
-            });
-        },
+        standardHeaders: true, // add the `RateLimit-*` headers to the response
+        legacyHeaders: false, // remove the `X-RateLimit-*` headers from the response
     });
 }
 
