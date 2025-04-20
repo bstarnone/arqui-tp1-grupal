@@ -1,6 +1,11 @@
 import { nanoid } from "nanoid";
 
-import { init as stateInit, getAccounts as stateAccounts, getRates as stateRates, getLog as stateLog } from "./state.js";
+import {
+  init as stateInit,
+  getAccounts as stateAccounts,
+  getRates as stateRates,
+  getLog as stateLog,
+} from "./state.js";
 
 let accounts;
 let rates;
@@ -56,6 +61,10 @@ export async function exchange(exchangeRequest) {
     counterAccountId: clientCounterAccountId,
     baseAmount,
   } = exchangeRequest;
+  console.log("🚀 ~ exchange ~ counterCurrency:", counterCurrency);
+  console.log("🚀 ~ exchange ~ baseCurrency:", baseCurrency);
+
+  console.log("RATES", rates);
 
   //get the exchange rate
   const exchangeRate = rates[baseCurrency][counterCurrency];

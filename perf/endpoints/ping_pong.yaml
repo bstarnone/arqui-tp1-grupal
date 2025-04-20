@@ -1,0 +1,78 @@
+# config:
+#   target: "http://localhost:5555"
+#   plugins:
+#     statsd:
+#       host: localhost
+#       port: 8125
+#       prefix: "artillery-api"
+#   payload:
+#     path: "../sample_data/exchange_valid.csv"
+#     fields:
+#       - baseCurrency
+#       - counterCurrency
+#       - baseAmount
+#       - baseAccountId
+#       - counterAccountId
+#     skip: 0
+#     count: 4 # payload.skip: 0, count: 4: Selects the first 4 rows (using same data for two different tests)
+#   http:
+#     pool: 10
+#   phases:
+#     - name: Ping-Pong Test
+#       duration: 10
+#       arrivalRate: 1
+# scenarios:
+#   - name: Ping-Pong Exchange
+#     flow:
+#       - loop:
+#           - post:
+#               url: "/exchange"
+#               json:
+#                 baseCurrency: "{{ $loopElement.baseCurrency }}"
+#                 counterCurrency: "{{ $loopElement.counterCurrency }}"
+#                 baseAmount: "{{ $loopElement.baseAmount }}"
+#                 baseAccountId: "{{ $loopElement.baseAccountId }}"
+#                 counterAccountId: "{{ $loopElement.counterAccountId }}"
+#         over: payload
+
+config:
+  target: "http://localhost:5555"
+  plugins:
+    statsd:
+      host: graphite
+      port: 8125
+      prefix: "artillery-api"
+  payload:
+    path: "../sample_data/exchange_valid.csv"
+    fields:
+      - baseCurrency
+      - counterCurrency
+      - baseAmount
+      - baseAccountId
+      - counterAccountId
+    skip: 0
+    count: 4 # payload.skip: 0, count: 4: Selects the first 4 rows (using same data for two different tests)
+    loadAll: true
+    name: exchanges
+    skipHeader: true
+  http:
+    pool: 10
+  phases:
+    - name: Ping-Pong Test
+      duration: 10
+      arrivalRate: 1
+scenarios:
+  - name: Ping-Pong Exchange
+    flow:
+      - loop:
+          - loop:
+              - post:
+                  url: "/exchange"
+                  json:
+                    baseCurrency: "{{ $loopElement.baseCurrency }}"
+                    counterCurrency: "{{ $loopElement.counterCurrency }}"
+                    baseAmount: "{{ $loopElement.baseAmount }}"
+                    baseAccountId: "{{ $loopElement.baseAccountId }}"
+                    counterAccountId: "{{ $loopElement.counterAccountId }}"
+            over: exchanges
+        count: 5

@@ -1,4 +1,5 @@
 import express from "express";
+import { StatsD } from "hot-shots";
 
 import {
   init as exchangeInit,
@@ -14,6 +15,12 @@ await exchangeInit();
 
 const app = express();
 const port = 3000;
+
+const statsd = new StatsD({
+  host: "graphite",
+  port: 8125,
+  prefix: "exchange.",
+});
 
 app.use(express.json());
 
@@ -85,7 +92,24 @@ app.post("/exchange", async (req, res) => {
   const exchangeRequest = { ...req.body };
   const exchangeResult = await exchange(exchangeRequest);
 
+  // if (exchangeResult.ok) {
+  //   statsd.gauge(`currency.${baseCurrency}.sells`, baseAmount);
+  //   statsd.gauge(`currency.${counterCurrency}.buys`, baseAmount);
+  //   statsd.gauge(`currency.${baseCurrency}.net`, -baseAmount);
+  //   statsd.gauge(`currency.${counterCurrency}.net`, baseAmount);
+
+  //   res.status(200).json(exchangeResult);
+  // }
   if (exchangeResult.ok) {
+    statsd.increment(`currency.${baseCurrency}.sells`, baseAmount);
+    statsd.increment(`currency.${counterCurrency}.buys`, baseAmount);
+
+    statsd.decrement(`currency.${baseCurrency}.net`, baseAmount);
+    statsd.increment(`currency.${counterCurrency}.net`, baseAmount);
+
+    statsd.increment(`currency.${baseCurrency}.volume`, baseAmount);
+    statsd.increment(`currency.${counterCurrency}.volume`, baseAmount);
+
     res.status(200).json(exchangeResult);
   } else {
     res.status(500).json(exchangeResult);

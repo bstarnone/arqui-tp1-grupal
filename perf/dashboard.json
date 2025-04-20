@@ -461,6 +461,120 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "aliasColors": {
+        "buys": "#7EB26D",
+        "sells": "#EAB839",
+        "net": "#447EBC"
+      },
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Graphite",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "height": "250px",
+      "hiddenSeries": false,
+      "id": 6,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "hideEmpty": true,
+        "max": true,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sideWidth": 250,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.10",
+      "pointradius": 5,
+      "points": true,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "refId": "A",
+          "target": "aliasByNode(stats.gauges.exchange.currency.*.buy, 4, 5)",
+          "textEditor": true
+        },
+        {
+          "refId": "B",
+          "target": "aliasByNode(stats.gauges.exchange.currency.*.sell, 4, 5)",
+          "textEditor": true
+        },
+        {
+          "refId": "C",
+          "target": "aliasByNode(stats.gauges.exchange.currency.*.net, 4, 5)",
+          "textEditor": true
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Currency Buy/Sell Metrics",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "Amount",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
   "refresh": "5s",
@@ -543,7 +657,7 @@
             "value": "exchange-nginx-1"
           }
         ],
-        "query": "exchange-api-1, exchange-api-2, exchange-api-3, exchange-cadvisor-1, exchange-grafana-1, exchange-graphite-1,  exchange-nginx-1, exchange_bbox_1",
+        "query": "exchange-api-1, exchange-api-2, exchange-api-3, exchange-cadvisor-1, exchange-grafana-1, exchange-graphite-1, exchange-nginx-1, exchange_bbox_1",
         "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"
@@ -572,5 +686,5 @@
   "timezone": "",
   "title": "Main dashboard",
   "uid": "arxIPammk",
-  "version": 3
+  "version": 4
 }

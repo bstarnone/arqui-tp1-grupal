@@ -1,0 +1,37 @@
+config:
+  target: "http://localhost:5555"
+  plugins:
+    statsd:
+      host: localhost
+      port: 8125
+      prefix: "artillery-api"
+  payload:
+    path: "../sample_data/exchange_valid.csv"
+    fields:
+      - baseCurrency
+      - counterCurrency
+      - baseAmount
+      - baseAccountId
+      - counterAccountId
+    skip: 4
+    count: 3 # payload.skip: 4, count: 3: Selects the last 3 rows (using same data for two different tests)
+    skipHeader: true
+  http:
+    pool: 10
+  phases:
+    - name: Net-Changing Test
+      duration: 30
+      arrivalRate: 1
+scenarios:
+  - name: Net-Changing Exchange
+    flow:
+      - loop:
+          - post:
+              url: "/exchange"
+              json:
+                baseCurrency: "{{ $loopElement.baseCurrency }}"
+                counterCurrency: "{{ $loopElement.counterCurrency }}"
+                baseAmount: "{{ $loopElement.baseAmount }}"
+                baseAccountId: "{{ $loopElement.baseAccountId }}"
+                counterAccountId: "{{ $loopElement.counterAccountId }}"
+        over: payload
