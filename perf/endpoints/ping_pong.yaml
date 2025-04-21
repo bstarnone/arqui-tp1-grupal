@@ -43,15 +43,13 @@ config:
       port: 8125
       prefix: "artillery-api"
   payload:
-    path: "../sample_data/exchange_valid.csv"
+    path: "../sample_data/exchange_pingpong.csv"
     fields:
       - baseCurrency
       - counterCurrency
       - baseAmount
       - baseAccountId
       - counterAccountId
-    skip: 0
-    count: 4 # payload.skip: 0, count: 4: Selects the first 4 rows (using same data for two different tests)
     loadAll: true
     name: exchanges
     skipHeader: true
@@ -75,4 +73,4 @@ scenarios:
                     baseAccountId: "{{ $loopElement.baseAccountId }}"
                     counterAccountId: "{{ $loopElement.counterAccountId }}"
             over: exchanges
-        count: 5
+        count: 1

@@ -1,0 +1,5 @@
+baseCurrency,counterCurrency,baseAmount,baseAccountId,counterAccountId
+ARS,USD,100.0,1,2
+ARS,USD,100.0,1,2
+USD,ARS,100.0,2,1
+USD,ARS,100.0,2,1
