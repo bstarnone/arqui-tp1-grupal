@@ -61,11 +61,6 @@ export async function exchange(exchangeRequest) {
     counterAccountId: clientCounterAccountId,
     baseAmount,
   } = exchangeRequest;
-  console.log("🚀 ~ exchange ~ counterCurrency:", counterCurrency);
-  console.log("🚀 ~ exchange ~ baseCurrency:", baseCurrency);
-
-  console.log("RATES", rates);
-
   //get the exchange rate
   const exchangeRate = rates[baseCurrency][counterCurrency];
   //compute the requested (counter) amount
