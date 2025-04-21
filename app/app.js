@@ -92,24 +92,11 @@ app.post("/exchange", async (req, res) => {
   const exchangeRequest = { ...req.body };
   const exchangeResult = await exchange(exchangeRequest);
 
-  // if (exchangeResult.ok) {
-  //   statsd.gauge(`currency.${baseCurrency}.sells`, baseAmount);
-  //   statsd.gauge(`currency.${counterCurrency}.buys`, baseAmount);
-  //   statsd.gauge(`currency.${baseCurrency}.net`, -baseAmount);
-  //   statsd.gauge(`currency.${counterCurrency}.net`, baseAmount);
-
-  //   res.status(200).json(exchangeResult);
-  // }
   if (exchangeResult.ok) {
-    statsd.increment(`currency.${baseCurrency}.sells`, baseAmount);
-    statsd.increment(`currency.${counterCurrency}.buys`, baseAmount);
-
-    statsd.decrement(`currency.${baseCurrency}.net`, baseAmount);
-    statsd.increment(`currency.${counterCurrency}.net`, baseAmount);
-
-    statsd.increment(`currency.${baseCurrency}.volume`, baseAmount);
-    statsd.increment(`currency.${counterCurrency}.volume`, baseAmount);
-
+    statsd.gaugeDelta(`currency.${baseCurrency}.volume`, baseAmount);
+    statsd.gaugeDelta(`currency.${counterCurrency}.volume`, baseAmount);
+    statsd.gaugeDelta(`currency.${baseCurrency}.net`, -baseAmount); // Negative for sells
+    statsd.gaugeDelta(`currency.${counterCurrency}.net`, baseAmount); // Positive for buys
     res.status(200).json(exchangeResult);
   } else {
     res.status(500).json(exchangeResult);

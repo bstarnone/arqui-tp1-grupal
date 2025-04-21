@@ -23,6 +23,7 @@ services:
     volumes:
       - ./statsd.config.json:/opt/statsd/config/udp.js
       - ./graphite.storage-schemas.conf:/opt/graphite/conf/storage-schemas.conf
+      - graphite_data:/opt/graphite/storage/whisper
     ports:
       - "8090:80"
       - "8125:8125/udp"
@@ -56,6 +57,8 @@ services:
 
 volumes:
   grafana_config:
+    driver: local
+  graphite_data:
     driver: local
 networks:
   backend:
