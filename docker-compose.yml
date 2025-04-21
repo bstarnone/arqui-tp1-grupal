@@ -1,6 +1,8 @@
 services:
   api:
     build: ./app
+    depends_on:
+      - mongodb
     networks:
       - backend
 
@@ -54,11 +56,21 @@ services:
       - "/var/lib/docker/:/var/lib/docker:ro"
     depends_on:
       - graphite
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_db_data:/data/db
+    networks:
+      - backend
 
 volumes:
   grafana_config:
     driver: local
   graphite_data:
     driver: local
+  mongodb_db_data:
+    name: mongodb_db_data
 networks:
   backend:

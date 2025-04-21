@@ -551,20 +551,22 @@
       },
       "id": 1,
       "options": {
-        "alertThreshold": true,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
+        "alertThreshold": true
       },
-      "pluginVersion": "11.5.2",
+      "percentage": false,
+      "pluginVersion": "7.3.10",
+      "pointradius": 5,
+      "points": true,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "asPercent(stats.gauges.cadvisor.exchange-api-1.memory_usage, 34359738368)",
+          "yaxis": 1
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
       "targets": [
         {
           "datasource": {
@@ -574,7 +576,7 @@
           "hide": false,
           "refCount": 0,
           "refId": "C",
-          "target": "alias(removeBelowValue(asPercent(derivative(keepLastValue(stats.gauges.cadvisor.$container.cpu_cumulative_usage, 100)), 10000000000), 0.0001), 'CPU')",
+          "target": "alias(removeBelowValue(asPercent(derivative(keepLastValue(stats.gauges.cadvisor.$container.cpu_cumulative_usage, 100)), 8000000000), 0.0001), 'CPU')",
           "textEditor": false
         },
         {
@@ -585,7 +587,7 @@
           "hide": false,
           "refCount": 0,
           "refId": "B",
-          "target": "alias(asPercent(stats.gauges.cadvisor.$container.memory_working_set, 34359738368), 'Memory')"
+          "target": "alias(asPercent(stats.gauges.cadvisor.$container.memory_working_set, 8589934592), 'Memory')"
         }
       ],
       "title": "Resources",
