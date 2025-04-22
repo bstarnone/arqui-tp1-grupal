@@ -1,5 +1,4 @@
 import express from "express";
-import { StatsD } from "hot-shots";
 
 import {
   init as exchangeInit,
@@ -15,12 +14,6 @@ await exchangeInit();
 
 const app = express();
 const port = 3000;
-
-const statsd = new StatsD({
-  host: "graphite",
-  port: 8125,
-  prefix: "exchange.",
-});
 
 app.use(express.json());
 
@@ -94,10 +87,6 @@ app.post("/exchange", async (req, res) => {
   const exchangeResult = await exchange(exchangeRequest);
 
   if (exchangeResult.ok) {
-    statsd.gaugeDelta(`currency.${baseCurrency}.volume`, baseAmount);
-    statsd.gaugeDelta(`currency.${counterCurrency}.volume`, baseAmount);
-    statsd.gaugeDelta(`currency.${baseCurrency}.net`, -baseAmount); // Negative for sells
-    statsd.gaugeDelta(`currency.${counterCurrency}.net`, baseAmount); // Positive for buys
     res.status(200).json(exchangeResult);
   } else {
     res.status(500).json(exchangeResult);

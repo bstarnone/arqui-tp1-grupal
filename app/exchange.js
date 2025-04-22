@@ -1,8 +1,10 @@
 import { nanoid } from "nanoid";
-import { accounts, rates, log } from "./mongo.js";
+import { accounts, rates, log, operations } from "./mongo.js";
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
+import { count } from "console";
+import statsd from "./statsD.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,11 +18,39 @@ export async function init() {
     log.find({}).toArray(),
     rates.find({}).toArray(),
     accounts.find({}).toArray(),
+    operations.find({}).toArray(),
   ]);
 
-  if (data[0].length === 0 && data[1].length === 0 && data[2].length === 0) {
+  if (
+    (data[0].length === 0 && data[1].length === 0 && data[2].length === 0,
+    data[3].length === 0)
+  ) {
     console.log("No data in DB, saving state from disk...");
     await saveState();
+  }
+
+  let fetchedOperations = data[3];
+  if (data[3].length === 0) {
+    // Fetch data and then set gauge
+    console.log("🚀 Fetching operations.... (data[3] no length)");
+
+    fetchedOperations = await operations.find({}).toArray();
+
+    console.log("🚀 ~ init ~ fetchedOperations:", fetchedOperations);
+  }
+
+  console.log("🚀 ~ init ~ fetchedOperations:", fetchedOperations);
+  for (const currencyOperations of fetchedOperations) {
+    await Promise.all([
+      statsd.gauge(
+        `currency.${currencyOperations.currency}.volume`,
+        currencyOperations.volume
+      ),
+      statsd.gauge(
+        `currency.${currencyOperations.currency}.net`,
+        currencyOperations.net
+      ),
+    ]);
   }
 }
 
@@ -39,11 +69,35 @@ export async function saveState() {
     const ratesData = fs.readFileSync(path.join(__dirname, RATES));
     const ratesObj = JSON.parse(ratesData);
     // Crear un documento por cada moneda base
+    const insertedCurrencies = new Set();
     for (const [baseCurrency, counterCurrencies] of Object.entries(ratesObj)) {
+      console.log("🚀 ~ saveState ~ counterCurrencies:", counterCurrencies);
+      console.log("🚀 ~ saveState ~ baseCurrency:", baseCurrency);
       await rates.insertOne({
         baseCurrency,
         rates: counterCurrencies,
       });
+      console.log("🚀 ~ saveState ~ insertedCurrencies:", insertedCurrencies);
+
+      if (!insertedCurrencies.has(baseCurrency)) {
+        await operations.insertOne({
+          currency: baseCurrency,
+          net: 0,
+          volume: 0,
+        });
+        insertedCurrencies.add(baseCurrency);
+      }
+
+      for (const [currency, _] of Object.entries(counterCurrencies)) {
+        if (!insertedCurrencies.has(currency)) {
+          await operations.insertOne({
+            currency: currency,
+            net: 0,
+            volume: 0,
+          });
+          insertedCurrencies.add(currency);
+        }
+      }
     }
 
     const logData = fs.readFileSync(path.join(__dirname, LOG));
@@ -158,14 +212,28 @@ export async function exchange(exchangeRequest) {
         exchangeResult.ok = true;
         exchangeResult.counterAmount = counterAmount;
 
-        await accounts.updateOne(
-          { _id: Number(baseAccount._id) },
-          { $set: { balance: baseAccount.balance } }
-        );
-        await accounts.updateOne(
-          { _id: Number(counterAccount._id) },
-          { $set: { balance: counterAccount.balance } }
-        );
+        await Promise.all([
+          accounts.updateOne(
+            { _id: Number(counterAccount._id) },
+            { $set: { balance: counterAccount.balance } }
+          ),
+          accounts.updateOne(
+            { _id: Number(baseAccount._id) },
+            { $set: { balance: baseAccount.balance } }
+          ),
+          operations.updateOne(
+            { currency: baseCurrency },
+            { $inc: { net: -baseAmount, volume: baseAmount } }
+          ),
+          operations.updateOne(
+            { currency: counterCurrency },
+            { $inc: { net: counterAmount, volume: counterAmount } }
+          ),
+        ]);
+        statsd.gaugeDelta(`currency.${baseCurrency}.volume`, baseAmount);
+        statsd.gaugeDelta(`currency.${counterCurrency}.volume`, counterAmount);
+        statsd.gaugeDelta(`currency.${baseCurrency}.net`, -baseAmount); // Negative for sells
+        statsd.gaugeDelta(`currency.${counterCurrency}.net`, counterAmount); // Positive for buys
       } else {
         //could not transfer to clients' counter account, return base amount to client
         await transfer(baseAccount._id, clientBaseAccountId, baseAmount);

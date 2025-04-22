@@ -9,6 +9,7 @@ const db = client.db("arvault-db");
 export const accounts = db.collection("accounts");
 export const rates = db.collection("rates");
 export const log = db.collection("log");
+export const operations = db.collection("operations");
 
 export const closeConnection = async () => {
   await client.close();
