@@ -18,10 +18,10 @@ const port = 3000;
 
 app.use(express.json());
 
-const LOG_REQ_PER_WINDOW = 100;
-const RATES_REQ_PER_WINDOW = 20;
+const LOG_REQ_PER_WINDOW = 300;
+const RATES_REQ_PER_WINDOW = 200;
 const ACCOUNTS_REQ_PER_WINDOW = 200;
-const EXCHANGE_REQ_PER_WINDOW = 100;
+const EXCHANGE_REQ_PER_WINDOW = 500;
 
 // ACCOUNT endpoints
 
@@ -110,12 +110,19 @@ app.post("/exchange", limiter(EXCHANGE_REQ_PER_WINDOW), async (req, res) => {
     return res.status(400).json({ error: "Malformed request" });
   }
 
+  const exchangeRequest = { ...req.body };
+  let exchangeResult;
   try {
-    const exchangeRequest = { ...req.body };
-    const exchangeResult = await exchange(exchangeRequest);
+    exchangeResult = await exchange(exchangeRequest);
+  }
+  catch (error) {
+    return res.status(400).json(error.message);
+  }
+
+  if (exchangeResult.ok) {
     res.status(200).json(exchangeResult);
-  } catch (error) {
-    res.status(error.statusCode).send(error.message);
+  } else {
+    res.status(500).json(exchangeResult);
   }
 });
 
