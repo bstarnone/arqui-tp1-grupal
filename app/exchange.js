@@ -73,10 +73,12 @@ export async function setAccountBalance(accountId, balance) {
     if (!account) {
       throw new Error("Account not found");
     } 
+  } else {
+    account = JSON.parse(account);
   }
   account.balance = balance;
   await accounts.updateOne({ _id: Number(accountId) }, { $set: { balance } });
-  redis.cache_client.del("accounts")
+  redis.cache_client.hSet("accounts", accountId, JSON.stringify(account));
   return account;
 }
 
@@ -101,10 +103,16 @@ export async function setRate(rateRequest) {
   
   if (!baseRate) {
     baseRate = await rates.findOne({ baseCurrency: baseCurrency});
+    console.log("baseRate not found in cache, fetching from DB");
+  } else {
+    baseRate = JSON.parse(baseRate);
   }
   
   if (!counterRate) {
     counterRate = await rates.findOne({ baseCurrency: counterCurrency });
+    console.log("counterRate not found in cache, fetching from DB");
+  } else {
+    counterRate = JSON.parse(counterRate);
   }
   
   baseRate.rates[counterCurrency] = rate;
@@ -132,12 +140,14 @@ export async function exchange(exchangeRequest) {
 
   let rate = await redis.cache_client.hGet("rates", baseCurrency);
   if (!rate) {
+    console.log("rate not found in cache, fetching from DB");
     rate = await rates.findOne({ baseCurrency });
+  } else {
+    rate = JSON.parse(rate);
   }
   
   //get the exchange rate
   const exchangeRate = rate.rates[counterCurrency];
-  //compute the requested (counter) amount
   const counterAmount = baseAmount * exchangeRate;
   //find our account on the provided (base) currency
   const baseAccount = await findAccountByCurrency(baseCurrency);

@@ -115,6 +115,7 @@ app.post("/exchange", async (req, res) => {
     if (exchangeResult.ok) {
       res.status(200).json(exchangeResult);
     } else {
+      console.error(exchangeResult);
       res.status(500).json("Internal server error");
     }
   } catch (error) {
