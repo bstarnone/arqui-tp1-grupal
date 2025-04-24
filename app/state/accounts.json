@@ -18,5 +18,45 @@
     "id": 4,
     "currency": "BRL",
     "balance": 60000
+  },
+  {
+    "id": 5,
+    "currency": "GBP",
+    "balance": 30000
+  },
+  {
+    "id": 6,
+    "currency": "JPY",
+    "balance": 5000000
+  },
+  {
+    "id": 7,
+    "currency": "CNY",
+    "balance": 250000
+  },
+  {
+    "id": 8,
+    "currency": "MXN",
+    "balance": 900000
+  },
+  {
+    "id": 9,
+    "currency": "CLP",
+    "balance": 80000000
+  },
+  {
+    "id": 10,
+    "currency": "COP",
+    "balance": 150000000
+  },
+  {
+    "id": 11,
+    "currency": "UYU",
+    "balance": 1000000
+  },
+  {
+    "id": 12,
+    "currency": "PEN",
+    "balance": 70000
   }
 ]
